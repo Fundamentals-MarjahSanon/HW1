@@ -1,0 +1,256 @@
+---
+title: An R Markdown document converted from "HW1.ipynb"
+output: html_document
+---
+
+Starting fresh
+
+```{r}
+rm(list = ls())
+```
+```
+
+Get the Data
+
+```
+```{r reading-data}
+# Opening a file from a url (file in Excel), name it 'fragility23'
+# linkGit stores the URL to the raw Excel file on GitHub
+linkGit <- "https://github.com/DACSS-Fundamentals/overview/raw/refs/heads/main/FSI-2023-DOWNLOAD.xlsx"
+
+#install.packages('rio') #package needed for importing Excel files from URLs
+library(rio)
+# rio::import() to read files directly from URLs.
+fragility23 <- rio::import(file = linkGit)
+```
+```
+
+Exploratory commands
+
+```
+```{r find-column-names}
+# names() returns a vector of all column names in the dataframe
+names(x = fragility23)
+```
+```{r check-data-types}
+# str() shows the structure of the object including data types
+# finds out if numeric columns have been read as should
+str(object = fragility23)
+```
+
+```{r show-first-10}
+# Show me the first 10 rows
+# head() displays the first n rows of the dataframe
+head(x = fragility23, 10)
+```
+
+```{r show-last-10}
+# Show me the last 10 rows ,tail() displays the last n rows of the dataframe
+tail(x = fragility23, 10)
+```
+
+
+```
+Transformative commands
+```
+
+```{r subsetting}
+# Keep Country, Total, S1: Demographic Pressures, P1: State Legitimacy, E2: Economic Inequality into object 'frag23_sub'
+
+# Using grep() to find column names matching a pattern
+# grep() searches for patterns in the column names
+# pattern = "Country|S1|P1|E2|Total" means find columns with any of these names
+# x = names(fragility23) searches within the column names
+# fixed = F allows for regex pattern matching
+# value = T returns the actual names (not positions)
+grep(pattern = "Country|S1|P1|E2|Total", x = names(fragility23), fixed = F, value = T)
+
+# Using keep-grep to select only the columns we want
+# This combines grep with subsetting to keep only matched columns
+# names(fragility23) gets all column names
+# fixed = F allows pattern matching
+# value = T returns column names instead of positions
+keep <- grep("Country|S1|P1|E2|Total", names(fragility23), fixed = F, value = T)
+
+# Create the subset dataframe using the keep vector
+frag23_sub <- fragility23[, keep]
+```
+
+
+```{r view-subset}
+# see the structure of the new subset
+str(frag23_sub)
+
+# see beginning rows of the subset
+head(frag23_sub)
+```
+
+```{r columns}
+# display  renamed columns
+names(frag23_sub)
+
+```
+
+## Filtering
+```{r filtering-top10}
+# order the dataframe by E2 in ascending order (best = lowest values) to get top ten best countries on e2
+ordered_by_E2 <- frag23_sub[order(frag23_sub$`E2: Economic Inequality`), ]
+
+# take the first 10 rows (top 10 best/lowest E2 scores)
+top10_best_E2 <- ordered_by_E2[1:10, ]
+print(top10_best_E2)
+
+# get the top 10 worst (highest E2 scores) using decreasing=TRUE
+worst_ordered <- frag23_sub[order(frag23_sub$`E2: Economic Inequality`, decreasing = TRUE), ]
+top10_worst_E2 <- worst_ordered[1:10, ]
+print(top10_worst_E2)
+```
+```
+```
+
+Computations
+
+```{r}
+
+```
+
+```{r statistical-description}
+# Give the statistical description of 'frag23_sub'
+
+summary(frag23_sub)
+```
+```{r worst-quartile}
+# The value of the worst quartile in Total with na.rm=TRUE to remove missing values before calculation
+worst_quartile_value <- quantile(frag23_sub$Total, 0.75, na.rm = TRUE)
+cat("Worst Quartile Threshold (75th percentile):", worst_quartile_value, "\n")
+# show all quartiles
+quartiles_total <- quantile(frag23_sub$Total, probs = c(0.25, 0.5, 0.75, 1), na.rm = TRUE)
+print(quartiles_total)
+```
+
+```{r correlations}
+# Show correlations between 'S1', 'E2', 'P1' must select only the numeric columns we want to correlate
+correlation_vars <- frag23_sub[, c('S1: Demographic Pressures',
+                                   'P1: State Legitimacy',
+                                   'E2: Economic Inequality')]
+
+# Calculate the correlation matrix with use="complete.obs" excludes rows with any missing values
+cor_matrix <- cor(correlation_vars, use = "complete.obs")
+
+# Display the correlation matrix rounded to 3 decimal places
+print("Correlation Matrix:")
+print(round(cor_matrix, 3))
+```
+
+```{r correlation-significance}
+# Test if correlation between S1 and E2 is statistically significant using cor.test() performs a hypothesis test for correlation
+cor_test_S1_E2 <- cor.test(frag23_sub$`S1: Demographic Pressures`,
+                           frag23_sub$`E2: Economic Inequality`)
+
+cat("\n\nCorrelation Test: S1 (Demographic Pressures) vs E2 (Economic Inequality)\n")
+print(cor_test_S1_E2)
+# Test correlation between P1 and E2
+cor_test_P1_E2 <- cor.test(frag23_sub$`P1: State Legitimacy`,
+                           frag23_sub$`E2: Economic Inequality`)
+
+cat("\n\nCorrelation Test: P1 (State Legitimacy) vs E2 (Economic Inequality)\n")
+print(cor_test_P1_E2)
+
+# test correlation between S1 and P1
+cor_test_S1_P1 <- cor.test(frag23_sub$`S1: Demographic Pressures`,
+                           frag23_sub$`P1: State Legitimacy`)
+
+cat("\n\nCorrelation Test: S1 (Demographic Pressures) vs P1 (State Legitimacy)\n")
+print(cor_test_S1_P1)
+```
+
+```{r regression}
+# Regress P1 and E2 on S1 predict S1 using P1 and E2 as predictors (linear regression)
+# dependent variable (outcome) is S1, independent variables (predictors) are P1 and E2
+regression_model <- lm(`S1: Demographic Pressures` ~ `P1: State Legitimacy` + `E2: Economic Inequality`,
+                       data = frag23_sub)
+#display results
+summary(regression_model)
+```
+```
+
+Plotting
+
+```{r}
+```{r plot-p1}
+# create a histogram to show the distribution of state legitimacy
+hist(frag23_sub$`P1: State Legitimacy`,
+     main = "Distribution of State Legitimacy (P1)",
+     xlab = "State Legitimacy Score",
+     col = "steelblue",
+     border = "black")
+```
+
+```{r scatter-s1-e2}
+# Visual correlation between S1 and E2, color points if country is on the worst quartile of Total
+# Total >= worst_quartile_value returns TRUE/FALSE for each country
+in_worst_quartile <- frag23_sub$Total >= worst_quartile_value
+# create colors vector: red for worst quartile, blue for others. ifelse() returns "red" when TRUE, "blue" when FALSE
+point_colors <- ifelse(in_worst_quartile, "red", "blue")
+
+# create scatter plot using color vectors
+plot(frag23_sub$`S1: Demographic Pressures`,
+     frag23_sub$`E2: Economic Inequality`,
+     main = "Demographic Pressures vs Economic Inequality",
+     xlab = "S1: Demographic Pressures",
+     ylab = "E2: Economic Inequality",
+     pch = 19,
+     col = point_colors)
+
+# added a legend to explain the colors
+legend("topright",
+       legend = c("Not in Worst Quartile", "Worst Quartile of Total"),
+       col = c("blue", "red"),
+       pch = 19)
+```
+
+```{r regression-visualization}
+# create predicted values from our regression model
+frag23_sub$predicted_S1 <- predict(regression_model, frag23_sub)
+
+# plot actual vs predicted values
+plot(frag23_sub$`S1: Demographic Pressures`,
+     frag23_sub$predicted_S1,
+     main = "Regression Model: Actual vs Predicted S1",
+     sub = "S1 predicted by P1 and E2",
+     xlab = "Actual S1 (Demographic Pressures)",
+     ylab = "Predicted S1",
+     pch = 19,
+     col = "darkgreen")
+
+#abline() adds a straight line: intercept=0, slope=1 (if predictions were perfect, all points would fall on this line)
+abline(a = 0, b = 1, lty = 2, col = "red")
+
+# legend
+legend("topleft",
+       legend = c("Data points", "Perfect prediction line"),
+       col = c("darkgreen", "red"),
+       lty = c(NA, 2),
+       pch = c(19, NA))
+```
+
+```{r correlation-heatmap}
+# Create a visual correlation matrix, load corrplot library for correlation visualization
+#install.packages('corrplot')
+library(corrplot)
+
+# Create a correlation plot
+# corrplot() creates a visual matrix of correlations
+# method="circle" uses circles sized by correlation strength, type="upper" shows only upper triangle, addCoef.col="black" adds correlation values in black text
+corrplot(cor_matrix,
+         method = "circle",
+         type = "upper",
+         tl.col = "black",
+         tl.srt = 45,
+         addCoef.col = "black",
+         number.cex = 0.8,
+         title = "Correlation Matrix: S1, P1, E2",
+         mar = c(0,0,2,0))
+```
+```
+
